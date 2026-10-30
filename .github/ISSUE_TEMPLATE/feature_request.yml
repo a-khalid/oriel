@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an idea or improvement for Oriel.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+  - type: markdown
+    attributes:
+      value: |
+        Some features are not possible on Apple's Virtualization.framework (3D acceleration for Windows, bridged networking without a restricted entitlement, USB passthrough, x86 guests). See the Limitations section of the README.

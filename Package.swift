@@ -2,33 +2,33 @@
 import PackageDescription
 
 let package = Package(
-    name: "Nafitha",
+    name: "Oriel",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "Nafitha", targets: ["Nafitha"]),
-        .library(name: "NafithaCore", targets: ["NafithaCore"]),
+        .executable(name: "Oriel", targets: ["Oriel"]),
+        .library(name: "OrielCore", targets: ["OrielCore"]),
     ],
     targets: [
         // Everything that talks to Virtualization.framework. No UI code here.
         .target(
-            name: "NafithaCore",
+            name: "OrielCore",
             linkerSettings: [.linkedFramework("Virtualization")]
         ),
-        // SwiftUI front end. Bundled into Nafitha.app by scripts/build-app.sh.
+        // SwiftUI front end. Bundled into Oriel.app by scripts/build-app.sh.
         .executableTarget(
-            name: "Nafitha",
-            dependencies: ["NafithaCore"],
+            name: "Oriel",
+            dependencies: ["OrielCore"],
             swiftSettings: [.defaultIsolation(MainActor.self)]
         ),
         // Headless boot check: scripts/smoke.sh <linux-arm64.iso>
         .executableTarget(
-            name: "nafitha-smoke",
-            dependencies: ["NafithaCore"],
-            path: "Sources/NafithaSmoke"
+            name: "oriel-smoke",
+            dependencies: ["OrielCore"],
+            path: "Sources/OrielSmoke"
         ),
         .testTarget(
-            name: "NafithaCoreTests",
-            dependencies: ["NafithaCore"]
+            name: "OrielCoreTests",
+            dependencies: ["OrielCore"]
         ),
     ]
 )

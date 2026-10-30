@@ -1,4 +1,4 @@
-.PHONY: app release run test lint-strings smoke clean
+.PHONY: app release run test lint-strings smoke clean icon snapshots
 
 app:
 	scripts/build-app.sh debug
@@ -7,7 +7,7 @@ release:
 	scripts/build-app.sh release
 
 run: app
-	open build/Nafitha.app
+	open build/Oriel.app
 
 test:
 	swift test
@@ -20,3 +20,10 @@ clean:
 
 smoke:
 	scripts/smoke.sh $(ISO)
+
+icon:
+	scripts/make-icon.sh
+
+snapshots: app
+	ORIEL_SNAPSHOTS=build/snapshots/en build/Oriel.app/Contents/MacOS/Oriel -AppleLanguages "(en)"
+	ORIEL_SNAPSHOTS=build/snapshots/ar build/Oriel.app/Contents/MacOS/Oriel -AppleLanguages "(ar)" -AppleTextDirection YES

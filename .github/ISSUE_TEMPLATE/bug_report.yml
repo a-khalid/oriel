@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in Oriel does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please search existing issues first. For security problems, follow SECURITY.md instead of opening an issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a Linux machine from ...
+        2. Start it
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: guest
+    attributes:
+      label: Guest system
+      options:
+        - macOS
+        - Windows 11
+        - Linux
+        - Not guest-specific
+    validations:
+      required: true
+  - type: input
+    id: guest-version
+    attributes:
+      label: Guest version or ISO
+      placeholder: e.g. Ubuntu 24.04.1 server arm64
+  - type: input
+    id: host
+    attributes:
+      label: Host Mac and macOS version
+      placeholder: e.g. MacBook Pro M3, macOS 26.1
+    validations:
+      required: true
+  - type: input
+    id: oriel-version
+    attributes:
+      label: Oriel commit or version
+      placeholder: output of `git rev-parse --short HEAD`
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant output, error messages, or the machine's console.log (from its .oriel bundle). Remove anything private.
+      render: text
