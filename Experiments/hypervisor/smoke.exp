@@ -1,0 +1,31 @@
+#!/usr/bin/expect -f
+# Boots to the Alpine login prompt, logs in, runs a command and powers off.
+# Usage: expect smoke.exp <oriel-hv> <oriel-hv arguments...>
+set timeout 90
+log_user 1
+set start [clock milliseconds]
+spawn {*}$argv
+
+expect {
+    "login:" { puts "\n✓ login prompt after [expr {([clock milliseconds] - $start) / 1000.0}]s" }
+    timeout { puts "\n✗ no login prompt"; exit 1 }
+    eof { puts "\n✗ VM exited before the login prompt"; exit 1 }
+}
+send "root\r"
+expect {
+    "# " {}
+    timeout { puts "\n✗ no shell"; exit 1 }
+}
+send "uname -m; nproc; echo RESULT-\$((6*7))\r"
+expect {
+    "RESULT-42" { puts "\n✓ shell runs commands" }
+    timeout { puts "\n✗ command did not finish"; exit 1 }
+}
+send "poweroff\r"
+expect {
+    eof {}
+    timeout { puts "\n✗ poweroff did not stop the VM"; exit 1 }
+}
+lassign [wait] pid spawnid os_error status
+if {$status != 0} { puts "✗ exit status $status"; exit 1 }
+puts "✓ powered off cleanly in [expr {([clock milliseconds] - $start) / 1000.0}]s"
