@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    # Package.swift needs the Swift 6.2 toolchain (Xcode 26 or later).
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Check translations
+        run: scripts/check-localizations.sh
+      - name: Build app bundle
+        run: scripts/build-app.sh release
