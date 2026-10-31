@@ -1,9 +1,17 @@
 name: CI
 
+# Docs-only changes skip CI: nothing they touch is built or tested here.
+# Keep this list in sync with the one in release.yml.
 on:
   push:
     branches: [main]
+    paths-ignore: &docs
+      - '**.md'
+      - 'docs/**'
+      - 'Experiments/**'
+      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
+    paths-ignore: *docs
 
 concurrency:
   group: ci-${{ github.ref }}
