@@ -113,6 +113,8 @@ make run
 
 ## خطة العمل
 
+يُتابَع التقدّم في لوحة [Oriel Roadmap](https://github.com/users/a-khalid/projects/2).
+
 - إقلاع Windows 11 وإخراجه من الحالة التجريبية
 - إصدارات موقّعة وموثّقة من Apple، وتثبيت عبر Homebrew
 - لقطات متعددة لحالة الجهاز
