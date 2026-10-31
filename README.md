@@ -141,6 +141,8 @@ These come from Virtualization.framework itself, not from Oriel:
 
 ## Roadmap
 
+Progress is tracked on the [Oriel Roadmap](https://github.com/users/a-khalid/projects/2) board.
+
 - Get Windows 11 past the boot manager and out of experimental status
 - Signed, notarized releases and a Homebrew cask
 - Snapshots of machine state beyond a single suspend
