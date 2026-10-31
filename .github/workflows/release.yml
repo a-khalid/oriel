@@ -1,0 +1,139 @@
+name: Release
+
+# Every merge into main publishes a new GitHub release with Oriel-<version>.dmg.
+#
+# Version: CFBundleShortVersionString in Support/Info.plist is the floor. If that tag doesn't
+# exist yet it is used as is; otherwise the patch number of the latest tag is bumped. Raise the
+# value in Info.plist to start a new minor or major line.
+#
+# Signing: ad hoc by default. Add these repository secrets to ship a signed, notarized image:
+#   MACOS_CERTIFICATE           base64 of a "Developer ID Application" .p12
+#   MACOS_CERTIFICATE_PASSWORD  password of that .p12
+#   NOTARY_APPLE_ID             Apple ID used for notarization
+#   NOTARY_TEAM_ID              Team ID
+#   NOTARY_PASSWORD             app-specific password for that Apple ID
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'Experiments/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+# Never run two releases at once: both would compute the same next tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Same toolchain as CI (Swift 6.2, Xcode 26). The runner is Apple silicon, so the app is arm64.
+    runs-on: macos-26
+    env:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version
+        id: version
+        run: |
+          base="$(plutil -extract CFBundleShortVersionString raw Support/Info.plist)"
+          latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+          latest="${latest#v}"
+          if [[ -z "$latest" ]] || { [[ "$base" != "$latest" ]] && [[ "$(printf '%s\n%s\n' "$base" "$latest" | sort -V | tail -n1)" == "$base" ]]; }; then
+            version="$base"
+          else
+            IFS=. read -r major minor patch <<< "$latest"
+            version="$major.$minor.$((patch + 1))"
+          fi
+          echo "Releasing $version (Info.plist $base, latest tag ${latest:-none})"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: swift test
+
+      - name: Check translations
+        run: scripts/check-localizations.sh
+
+      - name: Import signing certificate
+        if: env.MACOS_CERTIFICATE != ''
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -f pkcs12
+          rm "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" >/dev/null
+          # shellcheck disable=SC2046 # one argument per existing keychain is intended
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$(security find-identity -v -p codesigning "$keychain" \
+            | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -n1)"
+          if [[ -z "$identity" ]]; then
+            echo "::error::No Developer ID Application identity in MACOS_CERTIFICATE"
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: Build app
+        env:
+          ORIEL_VERSION: ${{ steps.version.outputs.version }}
+          ORIEL_BUILD: ${{ github.run_number }}
+        run: scripts/build-app.sh release
+
+      - name: Build disk image
+        run: scripts/make-dmg.sh "build/Oriel-${{ steps.version.outputs.version }}.dmg"
+
+      - name: Notarize
+        if: env.SIGN_IDENTITY != '' && env.NOTARY_APPLE_ID != ''
+        run: |
+          dmg="build/Oriel-${{ steps.version.outputs.version }}.dmg"
+          xcrun notarytool submit "$dmg" --wait \
+            --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
+          xcrun stapler staple "$dmg"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          dmg="Oriel-$VERSION.dmg"
+          (cd build && shasum -a 256 "$dmg" > "$dmg.sha256")
+
+          {
+            echo "Download **$dmg**, open it and drag Oriel to Applications. Requires macOS 14 or later on Apple silicon."
+            echo
+            if [[ -z "${SIGN_IDENTITY:-}" || -z "${NOTARY_APPLE_ID:-}" ]]; then
+              echo "> [!NOTE]"
+              echo "> This build is not notarized. On first launch macOS will refuse to open it."
+              echo "> Allow it under **System Settings → Privacy & Security → Open Anyway**, or run:"
+              echo "> \`xattr -dr com.apple.quarantine /Applications/Oriel.app\`"
+              echo
+            fi
+          } > "$RUNNER_TEMP/notes.md"
+
+          gh release create "v$VERSION" "build/$dmg" "build/$dmg.sha256" \
+            --target "$GITHUB_SHA" \
+            --title "Oriel $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes
+
+      - name: Clean up keychain
+        if: always() && env.MACOS_CERTIFICATE != ''
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true

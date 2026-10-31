@@ -50,7 +50,9 @@ The screenshots are generated from demo machines with `make snapshots`.
 
 ## Build and run
 
-There are no prebuilt releases yet. Build from source:
+Every merge into `main` publishes a disk image on the [Releases](https://github.com/a-khalid/oriel/releases) page. Until releases are notarized, allow the app under **System Settings → Privacy & Security → Open Anyway** on first launch.
+
+Or build from source:
 
 ```bash
 git clone https://github.com/a-khalid/oriel.git
@@ -64,6 +66,7 @@ make run
 |---|---|
 | `make app` | Debug build of `build/Oriel.app` |
 | `make release` | Optimized build |
+| `make dmg` | Optimized build packaged as `build/Oriel-<version>.dmg` |
 | `make run` | Build and open the app |
 | `make test` | Unit tests (`swift-testing`) |
 | `make lint-strings` | Fail if a UI string lacks a translation |
@@ -73,7 +76,7 @@ make run
 
 `make smoke` boots the ISO through the same code the app uses and waits for `login:` on `/dev/hvc0`. The guest kernel must log to `console=hvc0`. Every EFI machine writes that console to `console.log` in its bundle.
 
-To sign for distribution, run `SIGN_IDENTITY="Developer ID Application: …" scripts/build-app.sh release`, then notarize the result.
+To sign for distribution, run `SIGN_IDENTITY="Developer ID Application: …" make dmg`, then notarize the image. The [release workflow](.github/workflows/release.yml) does this automatically once its signing secrets are set.
 
 ## Guest support
 
