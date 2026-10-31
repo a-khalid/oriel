@@ -1,10 +1,13 @@
-.PHONY: app release run test lint-strings smoke clean icon snapshots
+.PHONY: app release dmg run test lint-strings smoke clean icon snapshots
 
 app:
 	scripts/build-app.sh debug
 
 release:
 	scripts/build-app.sh release
+
+dmg: release
+	scripts/make-dmg.sh
 
 run: app
 	open build/Oriel.app
